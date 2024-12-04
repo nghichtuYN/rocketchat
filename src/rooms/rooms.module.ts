@@ -1,20 +1,22 @@
 import { Module } from '@nestjs/common';
+import { RoomsController } from './rooms.controller';
+import { RoomsService } from './rooms.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UsersSchema } from './users.schema';
-import { UsersService } from './users.service';
-import { UsersController } from './users.controller';
 import { ConfigModule } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { Rooms, RoomsSchema } from './rooms.schema';
+import { UsersModule } from '../users/users.module';
+import { MessagesModule } from '../messages/messages.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: User.name, schema: UsersSchema }]),
+    MongooseModule.forFeature([{ name: Rooms.name, schema: RoomsSchema }]),
     ConfigModule,
     MulterModule.register({
       storage: diskStorage({
-        destination: './uploads/avatar',
+        destination: './uploads/rooms',
         filename: (req, file, cb) => {
           const filename = `${Date.now()}-${file.originalname}`;
           cb(null, filename);
@@ -36,9 +38,11 @@ import { extname } from 'path';
         cb(null, true);
       },
     }),
+    UsersModule,
+    MessagesModule,
   ],
   exports: [MongooseModule],
-  providers: [UsersService],
-  controllers: [UsersController],
+  controllers: [RoomsController],
+  providers: [RoomsService],
 })
-export class UsersModule {}
+export class RoomsModule {}

@@ -83,12 +83,12 @@ export class AuthService {
     const payload = {
       _id: existingUser._id.toString(),
       email: existingUser.email,
+      role: existingUser.role,
     };
     return this.generateToken(payload);
   }
 
   async refreshToken(refresh_token: string): Promise<any> {
-    console.log('Received refresh token type:', typeof refresh_token); // Log the token type to confirm it's a string
     try {
       const decoded = await this.jwtService.verifyAsync(refresh_token, {
         secret: this.configService.get<string>('SECRET'),

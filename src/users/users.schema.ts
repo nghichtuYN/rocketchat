@@ -1,10 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { Schema as MongooseSchema } from 'mongoose';
 
-export type UsersDocument = HydratedDocument<User>;
+// export type UsersDocument = HydratedDocument<User>;
 
 @Schema({ timestamps: true })
 export class User {
+  @Prop({ type: MongooseSchema.Types.ObjectId, auto: true })
+  _id: MongooseSchema.Types.ObjectId;
   @Prop({ required: true })
   username: string;
   @Prop({ required: true })
@@ -16,7 +18,11 @@ export class User {
   @Prop({ default: 'offline' })
   status: string;
   @Prop({ default: true })
-  isActive: boolean;
+  active: boolean;
+  @Prop({ default: 'user' })
+  role: string;
+  @Prop({ default: null, nullable: true })
+  avatar: string;
 }
 
 export const UsersSchema = SchemaFactory.createForClass(User);
