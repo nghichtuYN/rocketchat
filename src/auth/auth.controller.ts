@@ -14,7 +14,6 @@ import { RegisterUserDto } from './dto/register-user.dto';
 import { AuthService } from './auth.service';
 import { LoginUserDto } from './dto/login-user.dto';
 import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { AuthGuard } from './auth.guard';
 
 @Controller()
 export class AuthController {
@@ -42,21 +41,12 @@ export class AuthController {
     return this.authService.login(loginUserDto);
   }
 
-  @ApiBearerAuth()
   @ApiTags('Users')
-  @UseGuards(AuthGuard)
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'OK' })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Bad request' })
-  @Post('users.regeneratePersonalAccessToken/:id')
-  refreshToken(
-    @Body() { refresh_token },
-    @Req() req,
-    @Param('id') id: string,
-  ): Promise<any> {
-    if (id !== req.user._id) {
-      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-    }
+  @Post('users.regeneratePersonalAccessToken')
+  refreshToken(@Body() { refresh_token }): Promise<any> {
     return this.authService.refreshToken(refresh_token);
   }
 }

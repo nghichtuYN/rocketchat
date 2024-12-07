@@ -12,6 +12,9 @@ import { User } from '../users/users.schema';
 import { CreateRoomDto } from './dto/create-room.dto';
 import * as bcrypt from 'bcrypt';
 import { AddMemberDto } from './dto/add-memer.dto';
+import { RemoveMemberDto } from './dto/remove-member.dto';
+import { RoomJoinDto } from './dto/room-join.dto';
+import { Message } from '../messages/messages.schema';
 
 @Injectable()
 export class RoomsService {
@@ -35,7 +38,7 @@ export class RoomsService {
 
   async createRoom(roomData: CreateRoomDto): Promise<Rooms> {
     const { roomType, password } = roomData;
-    if (roomType === 'private' && password) {
+    if (roomType === 'private' && password !== '') {
       const hashedPassword = await this.hashPassword(password);
       const newRoom = new this.roomModel({
         ...roomData,
@@ -43,6 +46,11 @@ export class RoomsService {
         password: hashedPassword,
       });
       return await newRoom.save();
+    } else {
+      throw new HttpException(
+        'password with private room is not null',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const newRoom = new this.roomModel(roomData);
     return newRoom.save();
@@ -57,13 +65,14 @@ export class RoomsService {
       throw new BadRequestException('Room not found');
     }
     if (!this.checkIsMembers(room, req.user._id)) {
+      console.log(typeof req.user._id);
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
     return room;
   }
 
-  async getAllRooms(): Promise<Rooms[]> {
-    return this.roomModel.find().populate('members messages');
+  async getAllRoomsByUser(req): Promise<Rooms[]> {
+    return this.roomModel.find({ members: req.user._id }).exec();
   }
 
   async addMemberToRoom(
@@ -72,19 +81,20 @@ export class RoomsService {
     roomId: string,
   ): Promise<Rooms> {
     const room = await this.getRoomById(req, roomId);
-    for (const memberId of addMemberDTO.members) {
-      const user = await this.userModel.findById(memberId).exec();
+    for (const member of addMemberDTO.members) {
+      const user = await this.userModel.findById(member._id).exec();
       if (!user) {
-        throw new NotFoundException(`User with ID ${memberId} not found`);
+        throw new NotFoundException(`User with ID ${member._id} not found`);
       }
-      if (!this.checkIsMembers(room, memberId)) {
+      if (!this.checkIsMembers(room, member._id.toString())) {
         if (!this.checkIsOwners(room, req?.user._id)) {
           throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
         }
         room.members.push(user);
       } else {
-        throw new Error(
-          `User with ID ${memberId} is already a member of the room`,
+        throw new HttpException(
+          `User with ID ${member._id} is already a member of the room`,
+          HttpStatus.BAD_REQUEST,
         );
       }
     }
@@ -104,21 +114,90 @@ export class RoomsService {
     avatarUrl: string,
   ): Promise<Rooms> {
     const room = await this.getRoomById(req, roomId);
+    if (!this.checkIsMembers(room, req.user._id)) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+
     room.avatarUrl = avatarUrl;
     return room.save();
   }
 
-  // Cập nhật mật khẩu phòng (dành cho phòng private)
-  async updateRoomPassword(
-    req,
-    roomId: string,
-    password: string,
-  ): Promise<Rooms> {
+  async deleteMember(req, roomId: string, removeMemberDTO: RemoveMemberDto) {
     const room = await this.getRoomById(req, roomId);
-    if (room.isPrivate) {
-      room.password = password;
-      return room.save();
+    if (!this.checkIsOwners(room, req.user._id)) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
-    throw new Error('Room is not private');
+    const notFoundMembers: string[] = [];
+    removeMemberDTO.members.forEach((member) => {
+      const existingMember = room.members.find(
+        (roomMember) => roomMember._id.toString() === member._id.toString(),
+      );
+      if (!existingMember) {
+        notFoundMembers.push(member._id.toString());
+      } else {
+        room.members = room.members.filter(
+          (roomMember) => roomMember._id.toString() !== member._id.toString(),
+        );
+      }
+    });
+    await room.save();
+    return { room, notFoundMembers };
+  }
+
+  async joinRoom(req, roomJoinDto: RoomJoinDto): Promise<Rooms> {
+    const { roomId, password } = roomJoinDto;
+
+    const [room, user] = await Promise.all([
+      this.getRoomById(req, roomId),
+      this.userModel.findById(req.user._id).exec(),
+    ]);
+
+    if (!room) {
+      throw new BadRequestException('Room not found');
+    }
+
+    if (!user) {
+      throw new HttpException(
+        `Not found user with id ${req.user._id}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (password) {
+      const isPasswordValid = bcrypt.compareSync(password, room.password);
+      if (!isPasswordValid) {
+        throw new HttpException(
+          'Mật khẩu không chính xác',
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+    }
+
+    if (this.checkIsMembers(room, req.user._id)) {
+      throw new HttpException(
+        `User with ID ${req.user._id} is already a member of the room`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    room.members.push(user);
+    await room.save();
+
+    return room;
+  }
+
+  async deleteRoom(req, roomId: string) {
+    try {
+      const room = await this.getRoomById(req, roomId);
+      if (!room) {
+        throw new BadRequestException('Room not found');
+      }
+      if (!this.checkIsOwners(room, req.user._id)) {
+        throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+      }
+      return await this.roomModel.deleteOne({ _id: roomId });
+    } catch {
+      throw new NotFoundException(`User with id ${roomId} not found`);
+    }
   }
 }

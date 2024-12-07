@@ -9,6 +9,7 @@ import { UsersModule } from './users/users.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { MessagesModule } from './messages/messages.module';
 import { RoomsModule } from './rooms/rooms.module';
+import { ChatroomGateway } from './chatroom/chatroom.gateway';
 
 @Module({
   imports: [

@@ -8,7 +8,6 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { Rooms, RoomsSchema } from './rooms.schema';
 import { UsersModule } from '../users/users.module';
-import { MessagesModule } from '../messages/messages.module';
 
 @Module({
   imports: [
@@ -39,7 +38,7 @@ import { MessagesModule } from '../messages/messages.module';
       },
     }),
     UsersModule,
-    MessagesModule,
+    // MessagesModule,
   ],
   exports: [MongooseModule],
   controllers: [RoomsController],

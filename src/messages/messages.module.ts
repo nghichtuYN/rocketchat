@@ -7,6 +7,10 @@ import { ConfigModule } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { UsersModule } from '../users/users.module';
+import { RoomsModule } from '../rooms/rooms.module';
+import { RoomsService } from '../rooms/rooms.service';
+import { ChatroomGateway } from '../chatroom/chatroom.gateway';
 
 @Module({
   imports: [
@@ -29,16 +33,18 @@ import { extname } from 'path';
           req.fileValidationError = 'Kích thước hình ảnh quá lớn, file < 5MB ';
           cb(null, false);
         }
-        const ext = extname(file.originalname).toLowerCase();
-        if (!['.jpg', '.jpeg', '.png'].includes(ext)) {
-          return cb(new Error('Invalid file type'), false); // Reject invalid file types
-        }
+        // const ext = extname(file.originalname).toLowerCase();
+        // // if (!['.jpg', '.jpeg', '.png'].includes(ext)) {
+        // //   return cb(new Error('Invalid file type'), false); // Reject invalid file types
+        // // }
         cb(null, true);
       },
     }),
+    UsersModule,
+    RoomsModule,
   ],
   exports: [MongooseModule],
   controllers: [MessagesController],
-  providers: [MessagesService],
+  providers: [MessagesService, RoomsService, ChatroomGateway],
 })
 export class MessagesModule {}

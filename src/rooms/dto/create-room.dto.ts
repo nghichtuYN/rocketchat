@@ -12,7 +12,7 @@ export class CreateRoomDto {
   @ApiProperty()
   @IsOptional()
   @IsArray()
-  members: User[];
+  members: Array<User>;
   @ApiProperty()
   @IsOptional()
   @IsString()
@@ -23,7 +23,7 @@ export class CreateRoomDto {
   @ApiProperty()
   @IsNotEmpty()
   @IsArray()
-  owners: User[];
+  owners: Array<User>;
   @ApiProperty()
   @IsOptional()
   @IsString()

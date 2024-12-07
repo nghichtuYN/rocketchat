@@ -11,7 +11,7 @@ export class Message extends Document {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   sender: User;
 
-  @Prop({ required: true })
+  @Prop({ nullable: true, default: null })
   content: string;
 
   @Prop({ required: true })

@@ -45,7 +45,7 @@ export class UsersController {
   @UseGuards(AuthGuard)
   @ApiQuery({ name: 'page' })
   @ApiQuery({ name: 'limit' })
-  @ApiQuery({ name: 'search' })
+  // @Api({ name: 'search' })
   @ApiResponse({ status: HttpStatus.OK, description: 'OK' })
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Unauthorized' })
   @Get('users.list')

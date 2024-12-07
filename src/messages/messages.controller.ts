@@ -1,15 +1,40 @@
-import { Body, Controller, Post, Req, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Req,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MessagesService } from './messages.service';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { AuthGuard } from '../auth/auth.guard';
+import { ApiTags } from '@nestjs/swagger';
 
-@Controller('messages')
+@ApiTags('Messages')
+@Controller()
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
-  @Post()
-  @UseInterceptors(FileInterceptor('message'))
-  async create(@Req() req, @Body() createMessageDto: CreateMessageDto) {
-    console.log('CREATED');
+  @Post('messages.send')
+  @UseInterceptors(FileInterceptor('fileAttach'))
+  @UseGuards(AuthGuard)
+  async create(
+    @Req() req,
+    @Body() createMessageDto: CreateMessageDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const { sender, roomId } = req.body;
+
+    const parsedSender = JSON.parse(sender);
+    const parsedRoomId = JSON.parse(roomId);
+    return this.messagesService.create(req, {
+      ...createMessageDto,
+      sender: parsedSender,
+      roomId: parsedRoomId,
+      fileUrl: file.destination + '/' + file.filename,
+    });
   }
 }
