@@ -14,7 +14,6 @@ import * as bcrypt from 'bcrypt';
 import { AddMemberDto } from './dto/add-memer.dto';
 import { RemoveMemberDto } from './dto/remove-member.dto';
 import { RoomJoinDto } from './dto/room-join.dto';
-import { Message } from '../messages/messages.schema';
 
 @Injectable()
 export class RoomsService {
@@ -38,21 +37,36 @@ export class RoomsService {
 
   async createRoom(roomData: CreateRoomDto): Promise<Rooms> {
     const { roomType, password } = roomData;
-    if (roomType === 'private' && password !== '') {
+
+    if (roomType === 'private') {
+      if (!password || password.trim() === '') {
+        throw new HttpException(
+          'Password for private room cannot be null or empty',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
       const hashedPassword = await this.hashPassword(password);
       const newRoom = new this.roomModel({
         ...roomData,
         isPrivate: true,
         password: hashedPassword,
       });
-      return await newRoom.save();
-    } else {
+      return newRoom.save();
+    }
+
+    if (password && password.trim() !== '') {
       throw new HttpException(
-        'password with private room is not null',
+        'Public rooms cannot have a password',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const newRoom = new this.roomModel(roomData);
+
+    const newRoom = new this.roomModel({
+      ...roomData,
+      isPrivate: false,
+      password: null,
+    });
+
     return newRoom.save();
   }
 
@@ -81,25 +95,36 @@ export class RoomsService {
     roomId: string,
   ): Promise<Rooms> {
     const room = await this.getRoomById(req, roomId);
+
+    const alreadyMembers: string[] = [];
+
     for (const member of addMemberDTO.members) {
       const user = await this.userModel.findById(member._id).exec();
+
       if (!user) {
         throw new NotFoundException(`User with ID ${member._id} not found`);
       }
+
       if (!this.checkIsMembers(room, member._id.toString())) {
         if (!this.checkIsOwners(room, req?.user._id)) {
           throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
         }
         room.members.push(user);
       } else {
-        throw new HttpException(
-          `User with ID ${member._id} is already a member of the room`,
-          HttpStatus.BAD_REQUEST,
-        );
+        alreadyMembers.push(member._id.toString());
       }
     }
 
-    return await room.save();
+    await room.save();
+
+    if (alreadyMembers.length > 0) {
+      throw new HttpException(
+        `Users with IDs ${alreadyMembers.join(', ')} are already members of the room`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    return room;
   }
 
   async updateRoomStatus(req, roomId: string, status: string): Promise<Rooms> {

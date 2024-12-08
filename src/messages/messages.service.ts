@@ -33,8 +33,17 @@ export class MessagesService {
     await newMessages.save();
     room.messages.push(newMessages);
     await room.save();
-    console.log(roomId);
+    // console.log(roomId);
+    const client = this.chatroomGateway.getClientIdByUserId(
+      sender._id.toString(),
+    );
+    if (client) {
+      console.log(`Found clientId for userId`);
+    } else {
+      console.log(`No clientId found for userId`);
+    }
     this.chatroomGateway.syncDataToRoom(
+      client,
       roomId._id.toString(),
       'newMessage',
       newMessages,
