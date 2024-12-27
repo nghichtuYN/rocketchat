@@ -73,7 +73,13 @@ export class RoomsService {
   async getRoomById(req, roomId: string): Promise<Rooms> {
     const room = await this.roomModel
       .findById(roomId)
-      .populate('members owners messages')
+      .populate({
+        path: 'members owners messages',
+        populate: {
+          path: 'sender',
+          select: 'name email avatar',
+        },
+      })
       .exec();
     if (!room) {
       throw new BadRequestException('Room not found');
@@ -155,13 +161,13 @@ export class RoomsService {
     const notFoundMembers: string[] = [];
     removeMemberDTO.members.forEach((member) => {
       const existingMember = room.members.find(
-        (roomMember) => roomMember._id.toString() === member._id.toString(),
+        (roomMember) => roomMember._id.toString() === member,
       );
       if (!existingMember) {
-        notFoundMembers.push(member._id.toString());
+        notFoundMembers.push(member.toString());
       } else {
         room.members = room.members.filter(
-          (roomMember) => roomMember._id.toString() !== member._id.toString(),
+          (roomMember) => roomMember._id.toString() !== member.toString(),
         );
       }
     });

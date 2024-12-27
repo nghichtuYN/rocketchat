@@ -8,6 +8,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Injectable } from '@nestjs/common';
+import { Message } from '../messages/messages.schema';
 
 @Injectable()
 @WebSocketGateway({ cors: { origin: '*' } })
@@ -43,18 +44,23 @@ export class ChatroomGateway
   }
 
   @SubscribeMessage('join')
-  handleJoinRoom(client: Socket, payload: string) {
-    const data = JSON.parse(payload);
-    this.connectedUsers.set(client.id, data.userId);
-    client.join(data.roomId);
-    console.log(this.server.engine);
-    console.log(`User ${data.userId} joined room ${data.roomId}`);
+  handleJoinRoom(client: Socket, payload) {
+    // const data = JSON.parse(payload);
+    console.log(payload);
+    this.connectedUsers.set(client.id, payload.userId);
+    client.join(payload.roomId);
+    console.log(`User ${payload.userId} joined room ${payload.roomId}`);
 
-    client.to(data.roomId).emit('joinedRoom', {
-      message: `User ${data.userId} has joined the room`,
-      userId: data.userId,
-      roomId: data.roomId,
+    client.to(payload.roomId).emit('joinedRoom', {
+      message: `User ${payload.userId} has joined the room`,
+      userId: payload.userId,
+      roomId: payload.roomId,
     });
+  }
+
+  @SubscribeMessage('newMessage')
+  handleNewMessage(client: Socket, payload: Message) {
+    console.log(payload);
   }
 
   @SubscribeMessage('leaveRoom')
@@ -65,6 +71,6 @@ export class ChatroomGateway
 
   syncDataToRoom(clientId: string, roomId: string, event: string, data: any) {
     const socket = this.server.sockets.sockets.get(clientId);
-    socket.to(roomId).emit(event, data);
+    this.server.to(roomId).emit(event, data);
   }
 }

@@ -6,6 +6,8 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MessagesService } from './messages.service';
@@ -21,6 +23,7 @@ export class MessagesController {
   @Post('messages.send')
   @UseInterceptors(FileInterceptor('fileAttach'))
   @UseGuards(AuthGuard)
+  @UsePipes(new ValidationPipe())
   async create(
     @Req() req,
     @Body() createMessageDto: CreateMessageDto,
@@ -28,13 +31,15 @@ export class MessagesController {
   ) {
     const { sender, roomId } = req.body;
 
-    const parsedSender = JSON.parse(sender);
-    const parsedRoomId = JSON.parse(roomId);
+    // const parsedSender = JSON.parse(sender);
+    // const parsedRoomId = JSON.parse(roomId);
     return this.messagesService.create(req, {
       ...createMessageDto,
-      sender: parsedSender,
-      roomId: parsedRoomId,
-      fileUrl: file.destination + '/' + file.filename,
+      sender,
+      roomId: roomId,
+      fileUrl: file?.destination
+        ? file?.destination + '/' + file.filename
+        : null,
     });
   }
 }

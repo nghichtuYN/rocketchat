@@ -51,9 +51,9 @@ export class UsersController {
   @Get('users.list')
   async findAll(@Query() query: FilterUserDto, @Request() req) {
     try {
-      if (req.user?.role !== 'admin') {
-        throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-      }
+      // if (req.user?.role !== 'admin') {
+      //   throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+      // }
       return await this.usersService.findAll(query);
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.UNAUTHORIZED);
@@ -86,7 +86,10 @@ export class UsersController {
     @Body() updateData: UserUpdateDto,
     @Request() req: any,
   ) {
-    if (req.user?._id !== id || req.user?.role !== 'admin') {
+    const isAdmin = req.user?.role === 'admin';
+    const isSelf = req.user?._id === id;
+
+    if (!isAdmin && !isSelf) {
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
     return this.usersService.updateUser(id, updateData);

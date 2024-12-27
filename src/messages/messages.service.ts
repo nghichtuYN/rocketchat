@@ -18,10 +18,11 @@ export class MessagesService {
 
   async create(req, createMessageDto: CreateMessageDto) {
     const { sender, roomId, fileUrl } = createMessageDto;
-    if (req.user._id !== sender._id) {
+    console.log(roomId);
+    if (req.user._id !== sender) {
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
-    const room = await this.roomService.getRoomById(req, roomId._id.toString());
+    const room = await this.roomService.getRoomById(req, roomId);
     if (!room) {
       throw new HttpException('Not found room ', HttpStatus.BAD_REQUEST);
     }
@@ -31,23 +32,25 @@ export class MessagesService {
       messageType: fileUrl ? 'text' : 'content',
     });
     await newMessages.save();
+    const newMsg = await this.messageModel
+      .findById(newMessages?._id.toString())
+      .populate({
+        path: 'sender',
+        select: 'name email avatar',
+      })
+      .exec();
+    console.log(newMsg);
+    console.log(newMessages?._id);
     room.messages.push(newMessages);
     await room.save();
     // console.log(roomId);
-    const client = this.chatroomGateway.getClientIdByUserId(
-      sender._id.toString(),
-    );
+    const client = this.chatroomGateway.getClientIdByUserId(sender);
     if (client) {
       console.log(`Found clientId for userId`);
     } else {
       console.log(`No clientId found for userId`);
     }
-    this.chatroomGateway.syncDataToRoom(
-      client,
-      roomId._id.toString(),
-      'newMessage',
-      newMessages,
-    );
+    this.chatroomGateway.syncDataToRoom(client, roomId, 'newMessage', newMsg);
     return newMessages;
   }
 }
